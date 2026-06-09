@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>부조금 관리 프로그램 (엑셀 일괄입력 완벽 수정본)</title>
+    <style>
+        /* 어르신 맞춤형 큰 글씨 및 고대비 디자인 */
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #222222;
+            --primary-color: #0056b3; 
+            --accent-color: #d63031;  
+            --edit-color: #e67e22; 
+            --excel-color: #1f7246; 
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-weight: bold;
+        }
+
+        body {
+            margin: 0;
+            padding: 15px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #111;
+        }
+
+        /* 탭 메뉴 스타일 */
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 15px 10px;
+            font-size: 20px;
+            text-align: center;
+            background-color: #e9ecef;
+            border: 2px solid #ccc;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            color: #444;
+        }
+        .tab-button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 입력 폼 라벨 */
+        .form-label {
+            display: block;
+            font-size: 18px;
+            color: #444;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
+
+        /* 입력창 및 버튼 공통 */
+        input, select, button, textarea {
+            font-size: 22px; 
+            padding: 15px;
+            width: 100%;
+            border-radius: var(--border-radius);
+            border: 2px solid #888888;
+            margin-bottom: 12px;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* 입력 상자 테두리 */
+        .form-container {
+            background: white; 
+            padding: 15px; 
+            border-radius: var(--border-radius); 
+            border: 3px solid #ddd;
+            display: none; 
+        }
+        .form-container.active {
+            display: block;
+        }
+        .form-container.editing {
+            border-color: var(--edit-color);
+            background-color: #fff9f2;
+        }
+
+        /* 상태 안내 글씨 */
+        #form-mode-title {
+            font-size: 24px;
+            color: #111;
+            margin-bottom: 15px;
+            text-align: center;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* 버튼 스타일 */
+        .btn-submit { background-color: #28a745; color: white; border: none; font-size: 24px; padding: 18px; cursor: pointer; margin-top: 10px; }
+        .btn-excel { background-color: var(--excel-color); color: white; border: none; font-size: 24px; padding: 18px; cursor: pointer; margin-top: 10px; }
+        .btn-update { background-color: var(--edit-color); color: white; border: none; font-size: 24px; padding: 18px; margin-top: 10px; display: none; }
+        .btn-cancel { background-color: #6c757d; color: white; border: none; font-size: 20px; padding: 12px; margin-top: 5px; display: none; }
+
+        /* 통계 영역 */
+        .summary-box {
+            background: #343a40;
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+        .summary-box span { color: #ffdd57; font-size: 28px; }
+
+        /* 검색 영역 스타일 */
+        .search-container {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            border: 2px solid #ccc;
+        }
+        .search-row {
+            display: flex;
+            gap: 10px;
+        }
+        .search-row input { margin-bottom: 0; flex: 2; }
+        .search-row button { margin-bottom: 0; flex: 1; background-color: var(--primary-color); color: white; border: none; padding: 10px; }
+
+        /* 그리드(표) 스타일 */
+        .grid-wrapper {
+            width: 100%;
+            overflow-x: auto; 
+            background: white;
+            border-radius: var(--border-radius);
+            border: 2px solid #ccc;
+        }
+
+        .data-grid {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 18px;
+            text-align: center;
+            min-width: 750px; 
+        }
+
+        .data-grid th, .data-grid td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ddd;
+            border-right: 1px solid #eee;
+        }
+
+        .data-grid th {
+            background-color: #343a40;
+            color: white;
+            font-size: 19px;
+        }
+
+        .data-grid tr:nth-child(even) { background-color: #f9f9f9; }
+        .text-income { color: var(--primary-color); }
+        .text-expense { color: var(--accent-color); }
+
+        .grid-btn {
+            padding: 8px 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            margin: 2px;
+            width: auto;
+            display: inline-block;
+        }
+        .grid-btn-edit { background-color: var(--edit-color); }
+        .grid-btn-delete { background-color: var(--accent-color); }
+
+        .history-title {
+            font-size: 24px;
+            margin: 25px 0 10px 0;
+            border-left: 5px solid var(--primary-color);
+            padding-left: 10px;
+        }
+
+        .info-box {
+            background-color: #e8f4fd; border: 2px solid #b8daff; padding: 15px;
+            border-radius: 8px; font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 15px; font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>✍️ 부조금 관리 장부</h1>
+
+    <div class="summary-box">
+        현재 장부 총 잔액<br>
+        <span id="total-balance">0원</span>
+    </div>
+
+    <div class="tab-container">
+        <div id="tab-single" class="tab-button active" onclick="switchTab('single')">✏️ 한 개씩 입력</div>
+        <div id="tab-bulk" class="tab-button" onclick="switchTab('bulk')">📊 엑셀 일괄입력</div>
+    </div>
+
+    <div id="form-single" class="form-container active">
+        <div id="form-mode-title">✏️ 새 내역 입력하기</div>
+
+        <label class="form-label" for="name">성명 (이름)</label>
+        <input type="text" id="name" placeholder="이름을 적으세요" autocomplete="off">
+
+        <label class="form-label" for="phone">연락처</label>
+        <input type="tel" id="phone" placeholder="전화번호를 적으세요 (선택)" autocomplete="off">
+
+        <label class="form-label" for="date">날짜</label>
+        <input type="date" id="date">
+
+        <label class="form-label" for="event">명목 (경조사 내용)</label>
+        <select id="event">
+            <option value="결혼식">💍 결혼식</option>
+            <option value="장례식">🙏 장례식</option>
+            <option value="돌잔치">👶 돌잔치</option>
+            <option value="칠순/고희">🎉 칠순/기타행사</option>
+            <option value="기타">📝 기타</option>
+        </select>
+
+        <label class="form-label" for="income">입금액 (받은 돈)</label>
+        <input type="number" id="income" value="0" inputmode="numeric">
+
+        <label class="form-label" for="expense">출금액 (보낸 돈)</label>
+        <input type="number" id="expense" value="0" inputmode="numeric">
+
+        <button id="btn-save" class="btn-submit" onclick="saveSingleData()">💾 장부에 저장하기</button>
+        <button id="btn-update" class="btn-update" onclick="updateData()">🟠 수정 완료하기</button>
+        <button id="btn-cancel" class="btn-cancel" onclick="resetForm()">❌ 수정 취소</button>
+    </div>
+
+    <div id="form-bulk" class="form-container">
+        <div class="info-box">
+            <strong>💡 엑셀 일괄입력 방법</strong><br>
+            엑셀에서 내용을 <strong>[성명, 연락처, 날짜, 명목, 입금액, 출금액]</strong> 순서로 블록 지정하여 복사(Ctrl+C)한 뒤 아래에 붙여넣으세요.<br>
+            * 데이터 사이의 공백이나 빈 칸이 있어도 안전하게 자동 처리됩니다.
+        </div>
+        <textarea id="excel-paste" rows="6" placeholder="여기에 복사한 엑셀 데이터를 붙여넣으세요.&#10;예시 모양:&#10;홍길동	010-1111-2222	2026-06-09	결혼식	50000	0"></textarea>
+        <button class="btn-excel" onclick="saveBulkData()">🚀 엑셀 자료 일괄 저장하기</button>
+    </div>
+
+    <div class="history-title">🔍 장부 검색하기</div>
+    <div class="search-container">
+        <div class="search-row">
+            <input type="text" id="search-keyword" placeholder="찾으려는 이름 또는 명목을 적으세요" onkeyup="if(window.event.keyCode==13){searchRecords()}">
+            <button onclick="searchRecords()">찾기</button>
+            <button onclick="clearSearch()" style="background-color:#6c757d; flex:0.6;">전체보기</button>
+        </div>
+    </div>
+
+    <div class="history-title" id="list-title">📜 저장된 장부 내역 (전체)</div>
+    
+    <div class="grid-wrapper">
+        <table class="data-grid">
+            <thead>
+                <tr>
+                    <th>날짜</th>
+                    <th>성명</th>
+                    <th>명목</th>
+                    <th>연락처</th>
+                    <th>입금액 (받음)</th>
+                    <th>출금액 (보냄)</th>
+                    <th>관리자 메뉴</th>
+                </tr>
+            </thead>
+            <tbody id="grid-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. IndexedDB 설정 및 초기화
+        // ==========================================
+        let db;
+        const dbName = "BujoGridSearchDB";
+        const storeName = "records";
+        let editTargetId = null; 
+        let currentSearchKeyword = ""; 
+
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = function(e) {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: "id", autoIncrement: true });
+            }
+        };
+
+        request.onsuccess = function(e) {
+            db = e.target.result;
+            initDate();
+            loadRecords(); 
+        };
+
+        request.onerror = function() { alert("데이터베이스를 열 수 없습니다."); };
+
+        function initDate() {
+            document.getElementById("date").value = new Date().toISOString().substring(0, 10);
+        }
+
+        function switchTab(type) {
+            document.getElementById("tab-single").classList.remove("active");
+            document.getElementById("tab-bulk").classList.remove("active");
+            document.getElementById("form-single").classList.remove("active");
+            document.getElementById("form-bulk").classList.remove("active");
+
+            if (type === 'single') {
+                document.getElementById("tab-single").classList.add("active");
+                document.getElementById("form-single").classList.add("active");
+            } else {
+                document.getElementById("tab-bulk").classList.add("active");
+                document.getElementById("form-bulk").classList.add("active");
+                resetForm(); 
+            }
+        }
+
+        // ==========================================
+        // 2. 데이터 등록 기능
+        // ==========================================
+        function saveSingleData() {
+            const data = getInputData();
+            if (!data) return; 
+
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
+            store.add(data);
+
+            transaction.oncomplete = function() {
+                resetForm();
+                loadRecords();
+                alert("정상적으로 저장되었습니다.");
+            };
+        }
+
+        // ⭐ 엑셀 일괄입력 파싱 엔진 완벽 개선
+        function saveBulkData() {
+            const pasteText = document.getElementById("excel-paste").value;
+            if (!pasteText.trim()) { alert("붙여넣은 데이터가 없습니다."); return; }
+
+            // 시스템에 구애받지 않도록 모든 종류의 줄바꿈 기호 통합 처리
+            const lines = pasteText.split(/\r\n|\r|\n/);
+            
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
+            let count = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue; // 빈 줄은 건너뜀
+
+                // 탭 문자(\t)로 우선 나누되, 탭이 안 먹힌 모바일 환경 등은 공백 2칸 이상도 인정하도록 유연성 확보
+                let columns = line.split(/\t/);
+                if (columns.length < 2) {
+                    columns = line.split(/\s{2,}/);
+                }
+
+                // 성명 정보라도 있는 최소한의 행인 경우 파싱 진행
+                if (columns.length > 0 && columns[0].trim() !== "") {
+                    const name = columns[0] ? columns[0].trim() : "이름없음";
+                    const phone = columns[1] ? columns[1].trim() : "";
+                    
+                    // 날짜 유효성 처리 (비어있으면 오늘 날짜)
+                    let date = columns[2] ? columns[2].trim() : "";
+                    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                        date = new Date().toISOString().substring(0, 10);
+                    }
+                    
+                    const event = columns[3] ? columns[3].trim() : "기타";
+                    
+                    // 문자열 및 기호 차단 처리 후 완벽한 숫자로 변환 (NaN 방지)
+                    let incomeStr = columns[4] ? columns[4].replace(/[^0-9]/g, "") : "0";
+                    let expenseStr = columns[5] ? columns[5].replace(/[^0-9]/g, "") : "0";
+                    
+                    let income = parseInt(incomeStr, 10);
+                    let expense = parseInt(expenseStr, 10);
+                    
+                    if (isNaN(income)) income = 0;
+                    if (isNaN(expense)) expense = 0;
+
+                    // 데이터베이스 포맷 검증 완료 후 안정적 적재
+                    store.add({ name, phone, date, event, income, expense });
+                    count++;
+                }
+            }
+
+            transaction.oncomplete = function() {
+                alert("총 " + count + "건의 엑셀 자료를 일괄 저장했습니다!");
+                document.getElementById("excel-paste").value = "";
+                switchTab('single');
+                loadRecords(); // 그리드 표 갱신
+            };
+
+            transaction.onerror = function(e) {
+                console.error(e);
+                alert("데이터베이스 저장 과정에서 에러가 발생했습니다. 순서나 형식을 확인해 주세요.");
+            };
+        }
+
+        // ==========================================
+        // 3. 검색 및 데이터 표출
+        // ==========================================
+        function searchRecords() {
+            const keyword = document.getElementById("search-keyword").value.trim();
+            if(!keyword) { alert("검색어를 입력해주세요."); return; }
+            currentSearchKeyword = keyword;
+            loadRecords(keyword);
+        }
+
+        function clearSearch() {
+            document.getElementById("search-keyword").value = "";
+            currentSearchKeyword = "";
+            loadRecords();
+        }
+
+        function loadRecords(filterKeyword = "") {
+            const gridBody = document.getElementById("grid-body");
+            gridBody.innerHTML = ""; 
+            
+            const listTitle = document.getElementById("list-title");
+            if(filterKeyword) {
+                listTitle.innerText = `🔍 검색된 내역 결과 ("${filterKeyword}")`;
+            } else {
+                listTitle.innerText = "📜 저장된 장부 내역 (전체)";
+            }
+
+            let totalBalance = 0;
+
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
+            const cursorRequest = store.openCursor(null, "prev");
+
+            cursorRequest.onsuccess = function(e) {
+                const cursor = e.target.result;
+
+                if (cursor) {
+                    const record = cursor.value;
+                    totalBalance += (record.income - record.expense);
+
+                    if (filterKeyword) {
+                        const matchName = record.name.includes(filterKeyword);
+                        const matchEvent = record.event.includes(filterKeyword);
+                        if (!matchName && matchEvent === false) {
+                            cursor.continue();
+                            return;
+                        }
+                    }
+
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${record.date}</td>
+                        <td>${record.name}</td>
+                        <td>${record.event}</td>
+                        <td>${record.phone ? record.phone : '-'}</td>
+                        <td class="text-income">${record.income > 0 ? record.income.toLocaleString() + '원' : '-'}</td>
+                        <td class="text-expense">${record.expense > 0 ? record.expense.toLocaleString() + '원' : '-'}</td>
+                        <td>
+                            <button class="grid-btn grid-btn-edit" onclick="startEdit(${record.id})">수정</button>
+                            <button class="grid-btn grid-btn-delete" onclick="deleteRecord(${record.id})">삭제</button>
+                        </td>
+                    `;
+                    gridBody.appendChild(tr);
+                    cursor.continue();
+                } else {
+                    document.getElementById("total-balance").innerText = totalBalance.toLocaleString() + "원";
+                    if(gridBody.innerHTML === "") {
+                        gridBody.innerHTML = "<tr><td colspan='7' style='padding:30px; color:#666;'>저장된 내역이 없습니다.</td></tr>";
+                    }
+                }
+            };
+        }
+
+        // ==========================================
+        // 4. 수정 및 삭제 연동 기능
+        // ==========================================
+        function startEdit(id) {
+            switchTab('single'); 
+            
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
+            const getRequest = store.get(id);
+
+            getRequest.onsuccess = function(e) {
+                const record = e.target.result;
+                if (!record) return;
+
+                editTargetId = id;
+
+                document.getElementById("name").value = record.name;
+                document.getElementById("phone").value = record.phone;
+                document.getElementById("date").value = record.date;
+                document.getElementById("event").value = record.event;
+                document.getElementById("income").value = record.income;
+                document.getElementById("expense").value = record.expense;
+
+                document.getElementById("form-single").classList.add("editing");
+                document.getElementById("form-mode-title").innerText = "🟠 내용을 수정하는 중입니다";
+                
+                document.getElementById("btn-save").style.display = "none";
+                document.getElementById("btn-update").style.display = "block";
+                document.getElementById("btn-cancel").style.display = "block";
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+        }
+
+        function updateData() {
+            const data = getInputData();
+            if (!data) return;
+
+            data.id = editTargetId; 
+
+            const transaction = db.transaction([storeName], "readwrite");
+            const store = transaction.objectStore(storeName);
+            
+            store.put(data).onsuccess = function() {
+                alert("수정이 완료되었습니다.");
+                resetForm();
+                loadRecords(currentSearchKeyword);
+            };
+        }
+
+        function deleteRecord(id) {
+            if (confirm("정말로 이 내역을 삭제하시겠습니까?")) {
+                const transaction = db.transaction([storeName], "readwrite");
+                const store = transaction.objectStore(storeName);
+                
+                store.delete(id).onsuccess = function() {
+                    if(editTargetId === id) resetForm();
+                    loadRecords(currentSearchKeyword);
+                };
+            }
+        }
+
+        function getInputData() {
+            const name = document.getElementById("name").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+            const date = document.getElementById("date").value;
+            const event = document.getElementById("event").value;
+            const incomeInput = document.getElementById("income").value;
+            const expenseInput = document.getElementById("expense").value;
+
+            if (!name) { alert("성명(이름)을 입력해주세요."); return null; }
+            if (!date) { alert("날짜를 선택해주세요."); return null; }
+
+            const income = incomeInput ? parseInt(incomeInput, 10) : 0;
+            const expense = expenseInput ? parseInt(expenseInput, 10) : 0;
+
+            return { name, phone, date, event, income, expense };
+        }
+
+        function resetForm() {
+            editTargetId = null;
+            document.getElementById("name").value = "";
+            document.getElementById("phone").value = "";
+            initDate();
+            document.getElementById("event").selectedIndex = 0;
+            document.getElementById("income").value = "0";
+            document.getElementById("expense").value = "0";
+
+            document.getElementById("form-single").classList.remove("editing");
+            document.getElementById("form-mode-title").innerText = "✏️ 새 내역 입력하기";
+
+            document.getElementById("btn-save").style.display = "block";
+            document.getElementById("btn-update").style.display = "none";
+            document.getElementById("btn-cancel").style.display = "none";
+        }
+    </script>
+</body>
+</html>
