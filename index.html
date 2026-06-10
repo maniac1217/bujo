@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>부조금 관리 프로그램 (엑셀 일괄입력 완벽 수정본)</title>
+    <title>부조금 관리 프로그램 (엑셀 가져오기/내보내기 완벽 지원)</title>
     <style>
         /* 어르신 맞춤형 큰 글씨 및 고대비 디자인 */
         :root {
@@ -14,6 +14,7 @@
             --accent-color: #d63031;  
             --edit-color: #e67e22; 
             --excel-color: #1f7246; 
+            --excel-download-color: #2e7d32; /* 다운로드용 짙은 초록색 */
             --border-radius: 12px;
         }
 
@@ -38,16 +39,18 @@
             color: #111;
         }
 
-        /* 탭 메뉴 스타일 */
+        /* 탭 및 버튼 메뉴 스타일 */
         .tab-container {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap; /* 휴대폰에서 줄바꿈이 안전하게 일어나도록 설정 */
         }
         .tab-button {
             flex: 1;
+            min-width: 130px;
             padding: 15px 10px;
-            font-size: 20px;
+            font-size: 19px;
             text-align: center;
             background-color: #e9ecef;
             border: 2px solid #ccc;
@@ -59,6 +62,22 @@
             background-color: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
+        }
+        
+        /* 상단 메뉴 옆에 고정 배치할 다운로드 단추 */
+        .btn-direct-download {
+            flex: 1;
+            min-width: 140px;
+            padding: 15px 10px;
+            font-size: 19px;
+            text-align: center;
+            background-color: var(--excel-download-color);
+            color: white;
+            border: 2px solid var(--excel-download-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-bottom: 0;
+            width: auto;
         }
 
         /* 입력 폼 라벨 */
@@ -101,7 +120,6 @@
             background-color: #fff9f2;
         }
 
-        /* 상태 안내 글씨 */
         #form-mode-title {
             font-size: 24px;
             color: #111;
@@ -112,7 +130,7 @@
             border-radius: 8px;
         }
 
-        /* 버튼 스타일 */
+        /* 버튼 색상 설정 */
         .btn-submit { background-color: #28a745; color: white; border: none; font-size: 24px; padding: 18px; cursor: pointer; margin-top: 10px; }
         .btn-excel { background-color: var(--excel-color); color: white; border: none; font-size: 24px; padding: 18px; cursor: pointer; margin-top: 10px; }
         .btn-update { background-color: var(--edit-color); color: white; border: none; font-size: 24px; padding: 18px; margin-top: 10px; display: none; }
@@ -138,10 +156,7 @@
             margin-bottom: 20px;
             border: 2px solid #ccc;
         }
-        .search-row {
-            display: flex;
-            gap: 10px;
-        }
+        .search-row { display: flex; gap: 10px; }
         .search-row input { margin-bottom: 0; flex: 2; }
         .search-row button { margin-bottom: 0; flex: 1; background-color: var(--primary-color); color: white; border: none; padding: 10px; }
 
@@ -217,6 +232,7 @@
     <div class="tab-container">
         <div id="tab-single" class="tab-button active" onclick="switchTab('single')">✏️ 한 개씩 입력</div>
         <div id="tab-bulk" class="tab-button" onclick="switchTab('bulk')">📊 엑셀 일괄입력</div>
+        <button class="btn-direct-download" onclick="downloadExcel()">📥 엑셀 일괄출력</button>
     </div>
 
     <div id="form-single" class="form-container active">
@@ -254,10 +270,9 @@
     <div id="form-bulk" class="form-container">
         <div class="info-box">
             <strong>💡 엑셀 일괄입력 방법</strong><br>
-            엑셀에서 내용을 <strong>[성명, 연락처, 날짜, 명목, 입금액, 출금액]</strong> 순서로 블록 지정하여 복사(Ctrl+C)한 뒤 아래에 붙여넣으세요.<br>
-            * 데이터 사이의 공백이나 빈 칸이 있어도 안전하게 자동 처리됩니다.
+            엑셀에서 내용을 <strong>[성명, 연락처, 날짜, 명목, 입금액, 출금액]</strong> 순서로 블록 지정하여 복사(Ctrl+C)한 뒤 아래에 붙여넣으세요.
         </div>
-        <textarea id="excel-paste" rows="6" placeholder="여기에 복사한 엑셀 데이터를 붙여넣으세요.&#10;예시 모양:&#10;홍길동	010-1111-2222	2026-06-09	결혼식	50000	0"></textarea>
+        <textarea id="excel-paste" rows="6" placeholder="여기에 복사한 엑셀 데이터를 붙여넣으세요."></textarea>
         <button class="btn-excel" onclick="saveBulkData()">🚀 엑셀 자료 일괄 저장하기</button>
     </div>
 
@@ -354,34 +369,28 @@
             };
         }
 
-        // ⭐ 엑셀 일괄입력 파싱 엔진 완벽 개선
         function saveBulkData() {
             const pasteText = document.getElementById("excel-paste").value;
             if (!pasteText.trim()) { alert("붙여넣은 데이터가 없습니다."); return; }
 
-            // 시스템에 구애받지 않도록 모든 종류의 줄바꿈 기호 통합 처리
             const lines = pasteText.split(/\r\n|\r|\n/);
-            
             const transaction = db.transaction([storeName], "readwrite");
             const store = transaction.objectStore(storeName);
             let count = 0;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (!line) continue; // 빈 줄은 건너뜀
+                if (!line) continue;
 
-                // 탭 문자(\t)로 우선 나누되, 탭이 안 먹힌 모바일 환경 등은 공백 2칸 이상도 인정하도록 유연성 확보
                 let columns = line.split(/\t/);
                 if (columns.length < 2) {
                     columns = line.split(/\s{2,}/);
                 }
 
-                // 성명 정보라도 있는 최소한의 행인 경우 파싱 진행
                 if (columns.length > 0 && columns[0].trim() !== "") {
                     const name = columns[0] ? columns[0].trim() : "이름없음";
                     const phone = columns[1] ? columns[1].trim() : "";
                     
-                    // 날짜 유효성 처리 (비어있으면 오늘 날짜)
                     let date = columns[2] ? columns[2].trim() : "";
                     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
                         date = new Date().toISOString().substring(0, 10);
@@ -389,7 +398,6 @@
                     
                     const event = columns[3] ? columns[3].trim() : "기타";
                     
-                    // 문자열 및 기호 차단 처리 후 완벽한 숫자로 변환 (NaN 방지)
                     let incomeStr = columns[4] ? columns[4].replace(/[^0-9]/g, "") : "0";
                     let expenseStr = columns[5] ? columns[5].replace(/[^0-9]/g, "") : "0";
                     
@@ -399,7 +407,6 @@
                     if (isNaN(income)) income = 0;
                     if (isNaN(expense)) expense = 0;
 
-                    // 데이터베이스 포맷 검증 완료 후 안정적 적재
                     store.add({ name, phone, date, event, income, expense });
                     count++;
                 }
@@ -409,17 +416,60 @@
                 alert("총 " + count + "건의 엑셀 자료를 일괄 저장했습니다!");
                 document.getElementById("excel-paste").value = "";
                 switchTab('single');
-                loadRecords(); // 그리드 표 갱신
-            };
-
-            transaction.onerror = function(e) {
-                console.error(e);
-                alert("데이터베이스 저장 과정에서 에러가 발생했습니다. 순서나 형식을 확인해 주세요.");
+                loadRecords(); 
             };
         }
 
         // ==========================================
-        // 3. 검색 및 데이터 표출
+        // 3. ⭐ 데이터 엑셀(CSV) 다운로드 기능 (내보내기)
+        // ==========================================
+        function downloadExcel() {
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
+            const cursorRequest = store.openCursor();
+            
+            // 엑셀에서 한글이 깨지지 않도록 하는 핵심 표식(BOM) 추가
+            let csvContent = "\uFEFF"; 
+            
+            // 제목행(헤더) 설정
+            csvContent += "날짜,성명,명목,연락처,입금액(받음),출금액(보냄)\n";
+
+            cursorRequest.onsuccess = function(e) {
+                const cursor = e.target.result;
+                if (cursor) {
+                    const record = cursor.value;
+                    
+                    // 각 데이터 컬럼에 쉼표(,)가 포함되어 피드가 깨지는 현상 방지 처리
+                    const safeName = record.name.replace(/,/g, " ");
+                    const safeEvent = record.event.replace(/,/g, " ");
+                    const safePhone = record.phone ? record.phone.replace(/,/g, " ") : "";
+
+                    // 한 줄씩 데이터 누적
+                    csvContent += `${record.date},${safeName},${safeEvent},${safePhone},${record.income},${record.expense}\n`;
+                    cursor.continue();
+                } else {
+                    // 모든 데이터 취합 완료 후 실제 브라우저 다운로드 실행
+                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                    const link = document.createElement("a");
+                    
+                    // 파일명에 오늘 날짜 자동 생성해서 부여
+                    const todayStr = new Date().toISOString().substring(0, 10);
+                    link.href = URL.createObjectURL(blob);
+                    link.setAttribute("download", `부조금장부_백업_${todayStr}.csv`);
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            };
+            
+            cursorRequest.onerror = function() {
+                alert("데이터를 추출하는 도중 오류가 발생했습니다.");
+            };
+        }
+
+        // ==========================================
+        // 4. 검색 및 데이터 표출
         // ==========================================
         function searchRecords() {
             const keyword = document.getElementById("search-keyword").value.trim();
@@ -492,7 +542,7 @@
         }
 
         // ==========================================
-        // 4. 수정 및 삭제 연동 기능
+        // 5. 수정 및 삭제 연동 기능
         // ==========================================
         function startEdit(id) {
             switchTab('single'); 
